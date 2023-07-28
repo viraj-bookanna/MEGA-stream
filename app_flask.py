@@ -38,29 +38,29 @@ def download():
                 yield dec[start-actual_start:]
             else:
                 yield cipher.decrypt(chunk)
-    #try:
-    mega_url = request.args.get("url", None)
-    if mega_url is None:
-        with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'main.html'), 'r') as file:
-            return Response(file.read(), content_type='text/html')
-    file_info = mega_file(mega_url)
-    if file_info['ok']:
-        requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
-        response = requests.get(file_info['url'], verify=False, headers=req_headers, stream=True)
-        headers = {
-            'Content-Type': 'application/octet-stream',
-            'Content-Disposition': 'attachment; filename="{}"'.format(file_info['file_name']),
-        }
-        if partial_content:
-            headers['Content-Length'] = int(response.headers.get('Content-Length'))-(start-actual_start)
-            headers['Content-Range'] = f"bytes {start}-{end}/{file_info['file_size']}"
+    try:
+        mega_url = request.args.get("url", None)
+        if mega_url is None:
+            with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'main.html'), 'r') as file:
+                return Response(file.read(), content_type='text/html')
+        file_info = mega_file(mega_url)
+        if file_info['ok']:
+            requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+            response = requests.get(file_info['url'], verify=False, headers=req_headers, stream=True)
+            headers = {
+                'Content-Type': 'application/octet-stream',
+                'Content-Disposition': 'attachment; filename="{}"'.format(file_info['file_name']),
+            }
+            if partial_content:
+                headers['Content-Length'] = int(response.headers.get('Content-Length'))-(start-actual_start)
+                headers['Content-Range'] = f"bytes {start}-{end}/{file_info['file_size']}"
+            else:
+                headers['Content-Length'] = file_info['file_size']
+            return Response(stream_with_context(stream_mega_file(file_info, response)), response.status_code, headers=headers)
         else:
-            headers['Content-Length'] = file_info['file_size']
-        return Response(stream_with_context(stream_mega_file(file_info, response)), response.status_code, headers=headers)
-    else:
-        return Response(file_info['error'])
-    #except Exception as e:
-        #return Response(repr(e))
+            return Response(file_info['error'])
+    except Exception as e:
+        return Response(repr(e))
 
 if __name__ == '__main__':
     app.run()
